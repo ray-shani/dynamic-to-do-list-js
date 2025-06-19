@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove previous styling classes
         taskFeedback.classList.remove('bg-green-100', 'text-green-700', 'border-green-300',
                                      'bg-red-100', 'text-red-700', 'border-red-300',
-                                     'bg-blue-100', 'text-blue-700', 'border-blue-300');
+                                     'bg-blue-100', 'text-blue-700', 'border-blue-300', 'hidden'); // Also remove hidden
+        taskFeedback.classList.remove('hidden');
+
 
         // Apply new styling based on message type
         if (type === 'success') {
@@ -38,14 +40,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Adds a new task to the to-do list.
+     * @param {string} taskText - The text content of the task.
+     * @param {boolean} save - Whether to save the task to Local Storage (default is true).
      */
-    function addTask() {
-        // Retrieve and trim the value from the task input field
-        const taskText = taskInput.value.trim();
+    function addTask(taskText, save = true) {
+        // If taskText is provided by loadTasks, it won't be empty.
+        // If it's called by user input, retrieve and trim the value.
+        const currentTaskText = taskText || taskInput.value.trim();
 
         // Check if taskText is not empty
-        if (taskText === "") {
-            showFeedback("Please enter a task.", "error"); // Use custom feedback instead of alert
+        if (currentTaskText === "") {
+            showFeedback("Please enter a task.", "error");
             return; // Exit the function if input is empty
         }
 
@@ -53,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const listItem = document.createElement('li');
         // Add Tailwind CSS classes for styling the list item
         listItem.className = 'flex items-center justify-between bg-gray-50 p-3 rounded-md border border-gray-200 shadow-sm';
-        listItem.textContent = taskText; // Set its text content to the task text
+        listItem.textContent = currentTaskText; // Set its text content to the task text
 
         // Create a new button element for removing the task
         const removeButton = document.createElement('button');
@@ -61,9 +66,16 @@ document.addEventListener('DOMContentLoaded', function() {
         removeButton.className = 'remove-btn'; // Assign the 'remove-btn' class for styling
 
         // Assign an onclick event to the remove button
-        // When triggered, it removes the parent li element from the taskList
         removeButton.onclick = function() {
+            // Get the text content of the task to be removed for Local Storage update
+            const taskToRemove = listItem.textContent.replace('Remove', '').trim();
             taskList.removeChild(listItem); // Remove the list item from the unordered list
+
+            // Update Local Storage after removing the task
+            let storedTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            storedTasks = storedTasks.filter(task => task !== taskToRemove);
+            localStorage.setItem('tasks', JSON.stringify(storedTasks));
+
             showFeedback("Task removed successfully!", "success"); // Show success feedback
         };
 
@@ -73,28 +85,40 @@ document.addEventListener('DOMContentLoaded', function() {
         // Append the new list item to the unordered list (task-list)
         taskList.appendChild(listItem);
 
-        // Clear the task input field after adding the task
-        taskInput.value = "";
-        showFeedback("Task added successfully!", "success"); // Show success feedback
+        // Clear the task input field only if it's a new task being added by the user
+        if (save) {
+            taskInput.value = "";
+            // Save the new task to Local Storage
+            const storedTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+            storedTasks.push(currentTaskText);
+            localStorage.setItem('tasks', JSON.stringify(storedTasks));
+            showFeedback("Task added successfully!", "success"); // Show success feedback
+        }
     }
+
+    /**
+     * Loads tasks from Local Storage when the page loads.
+     */
+    function loadTasks() {
+        const storedTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+        storedTasks.forEach(taskText => addTask(taskText, false)); // 'false' indicates not to save again to Local Storage
+    }
+
 
     // Attach Event Listeners:
 
     // 1. Add an event listener to the addButton to call addTask when clicked
-    addButton.addEventListener('click', addTask);
+    addButton.addEventListener('click', () => addTask(null, true)); // Pass null for taskText as it will be read from input
 
     // 2. Add an event listener to the taskInput for the 'keypress' event
     // This allows tasks to be added by pressing the "Enter" key
     taskInput.addEventListener('keypress', function(event) {
         // Check if the pressed key is 'Enter'
         if (event.key === 'Enter') {
-            addTask(); // Call the addTask function
+            addTask(null, true); // Pass null for taskText as it will be read from input
         }
     });
 
-    // Initial state: You might want to display some initial tasks or a welcome message here.
-    // As per the prompt, `addTask` is only called on user action (button click or Enter key).
-    // The instruction "Invoke the addTask function on DOMContentLoaded" would mean
-    // calling it without user input, which isn't typical for a to-do item add.
-    // Instead, the setup of listeners ensures the app is ready on DOMContentLoaded.
+    // Invoke loadTasks function when the DOM content is fully loaded
+    loadTasks();
 });
