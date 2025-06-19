@@ -50,7 +50,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Check if taskText is not empty
         if (currentTaskText === "") {
-            showFeedback("Please enter a task.", "error");
+            // Using alert as requested
+            alert("Please enter a task.");
             return; // Exit the function if input is empty
         }
 
